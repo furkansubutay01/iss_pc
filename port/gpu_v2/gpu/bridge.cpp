@@ -384,8 +384,14 @@ extern "C" void IssPreciseSleepUs(unsigned us){
 }
 // The renderer's hooks in the game's code and the checked readback sites: once the image is
 // loaded and relocated, before the guest threads start.
+namespace MemoryPatcher {extern u64 g_eboot_address;} // host_hooks.cpp
 extern "C" void iss_gpu_install_image(uint64_t image_base){
     host.image_base=image_base;
+    // The eboot base the shadPS4 code reads (BufferCache::IsRelaxedSite, the fault burst logs):
+    // never set before, so ISS_TUNING relaxed_site=<offset> never matched and those logs printed
+    // absolute addresses.
+    MemoryPatcher::g_eboot_address=image_base;
+    std::fprintf(stderr,"PORT_TUNING image_base=0x%llx\n",(unsigned long long)image_base);
     // The executing image (as native/engine_draw.cpp patches it), not a backing view.
     if(iss::native_shadow::Enabled())
         iss::native_shadow::Install(host.image_base,reinterpret_cast<const unsigned char*>(host.image_base+0x43D590));
