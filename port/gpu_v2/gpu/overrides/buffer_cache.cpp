@@ -2517,9 +2517,12 @@ void BufferCache::FinishReadback(size_t index) {
         }
     }
     // readback_relaxed_sites: pages a guest read was let through meanwhile (no longer GPU
-    // modified) get the new data too, unless the guest or the GPU changed them since.
+    // modified) get the new data too, unless the guest or the GPU changed them since
+    // (relaxed_lagged: only the guest).
     if (!readback.relaxed_pages.empty() && !readback.copies.empty()) {
         bool refreshed_any = false;
+        const bool lagged =
+            Common::Perf::GetTuning().relaxed_lagged.load(std::memory_order_relaxed);
         for (const VAddr page : readback.relaxed_pages) {
             const bool refreshed = memory_tracker->WithCleanPageLocked(page, [&] {
                 for (const auto& copy : readback.copies) {
@@ -2533,7 +2536,7 @@ void BufferCache::FinishReadback(size_t index) {
                                                 hi - lo);
                     }
                 }
-            });
+            }, lagged);
             refreshed_any |= refreshed;
             Common::Perf::Add(refreshed ? Common::Perf::ReadbackRelaxedRefreshes
                                         : Common::Perf::ReadbackRelaxedSkips);

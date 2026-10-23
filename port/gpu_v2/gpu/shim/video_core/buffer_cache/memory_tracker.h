@@ -71,13 +71,16 @@ public:
     /// (guest memory and the GPU copy hold the same data): a guest write to it waits meanwhile.
     /// Returns whether func was called.
     template <typename Func>
-    bool WithCleanPageLocked(VAddr page, Func&& func) {
+    bool WithCleanPageLocked(VAddr page, Func&& func, bool allow_gpu_modified = false) {
         bool called = false;
         IteratePages(page, BYTES_PER_PAGE, [&](RegionManager* manager, u64 offset, u64 size) {
             const auto bounds = manager->GetBounds(offset, size);
             const bool late = manager->Lock(bounds);
+            // allow_gpu_modified: only a guest write keeps func from running; a page the GPU
+            // wrote again stays GPU modified (the next read downloads it again).
             if (!manager->template IsRegionModified<Type::CPU>(offset, size) &&
-                !manager->template IsRegionModified<Type::GPU>(offset, size)) {
+                (allow_gpu_modified ||
+                 !manager->template IsRegionModified<Type::GPU>(offset, size))) {
                 func();
                 called = true;
             }

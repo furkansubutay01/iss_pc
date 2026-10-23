@@ -543,6 +543,11 @@ struct Tuning {
     std::array<std::atomic<u64>, MaxRelaxedSites> relaxed_sites{};
     std::atomic<u32> num_relaxed_sites{0};
     std::atomic<bool> relaxed_all{false};
+    /// relaxed_lagged: the new data of a relaxed read also lands when the GPU wrote the page
+    /// again meanwhile (only a guest write skips it). Data the GPU rewrites every frame, such as
+    /// a count the game reads without a fence, then reaches the guest a frame late, as on the
+    /// PS4; without it guest memory never gets it and the game keeps reading a stale value.
+    std::atomic<bool> relaxed_lagged{false};
     /// The compute work of the guest's asynchronous compute queues runs on a GPU queue of its
     /// own, alongside the graphics work, as on the PS4 (dispatches reading or writing images
     /// stay on the graphics queue). Dependencies between the queues are tracked per 256 KB of

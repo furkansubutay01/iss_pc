@@ -517,6 +517,9 @@ extern "C" int iss_gpu_initialize(const IssGpuCallbacks *callbacks){
             // that 256 byte block of the game's code do not wait for the GPU (readback_relaxed_sites).
             else if(name=="relaxed_site"){const u32 n=tuning.num_relaxed_sites.load();if(n<Common::Perf::Tuning::MaxRelaxedSites){tuning.relaxed_sites[n]=std::strtoull(value.c_str(),nullptr,0)&~0xFFull;tuning.num_relaxed_sites.store(n+1);}}
             else if(name=="relaxed_all")tuning.relaxed_all=std::strtoull(value.c_str(),nullptr,0)!=0;
+            // relaxed_lagged=1: a relaxed read's new data lands even if the GPU rewrote the page.
+            else if(name=="relaxed_lagged")tuning.relaxed_lagged=std::strtoull(value.c_str(),nullptr,0)!=0;
+            else if(name=="perf_log")tuning.perf_log=std::strtoull(value.c_str(),nullptr,0)!=0;
             else known=false;
             std::fprintf(stderr,"PORT_TUNING %s=%s%s\n",name.c_str(),value.c_str(),known?"":" (unknown, ignored)");
         }
