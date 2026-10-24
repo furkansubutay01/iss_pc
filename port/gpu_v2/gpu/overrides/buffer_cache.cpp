@@ -3507,7 +3507,13 @@ void BufferCache::EnsureResident(const Buffer* arena, u64 first_block, u64 last_
         backing.memory = device_memory;
         backing.offset = memory_offset >> block_shift;
 
-        LOG_INFO(Render, "Making range start={}, end={} resident", backing.start, backing.end);
+        // Rate limited like BindBuffers' clamp log: an unbuffered write per bind.
+        static std::atomic<u64> resident_logs{};
+        if (const u64 n = resident_logs.fetch_add(1, std::memory_order_relaxed);
+            n < 16 || (n & 0xFFF) == 0) {
+            LOG_INFO(Render, "Making range start={}, end={} resident (#{})", backing.start,
+                     backing.end, n + 1);
+        }
 
         const vk::SparseMemoryBind bind{
             .resourceOffset = (range.start << block_shift) - arena->cpu_addr,

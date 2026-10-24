@@ -4227,8 +4227,15 @@ void Rasterizer::BindBuffers(const Shader::Info& stage, Shader::Backend::Binding
                 const u64 size = VideoCore::ClampHugeRead(
                     memory->ClampRangeSize(vsharp.base_address, vsharp.GetSize()), desc.is_written);
                 if (size != vsharp.GetSize()) {
-                    LOG_ERROR(Render, "Clamped size from {} to {} for stage {:#x}",
-                              vsharp.GetSize(), size, stage.pgm_hash);
+                    // Rate limited: inFAMOUS clamps ~100 descriptors a second, and every
+                    // log line is an unbuffered write on the command processor thread
+                    // (a third of its time in the city, 2026-10-25 sample).
+                    static std::atomic<u64> clamped{};
+                    if (const u64 n = clamped.fetch_add(1, std::memory_order_relaxed);
+                        n < 16 || (n & 0xFFFF) == 0) {
+                        LOG_ERROR(Render, "Clamped size from {} to {} for stage {:#x} (#{})",
+                                  vsharp.GetSize(), size, stage.pgm_hash, n + 1);
+                    }
                 }
                 // Correlate the game's 48-byte feedback descriptor with the
                 // EBOOT call-site observation. This is passive: recycled guest
